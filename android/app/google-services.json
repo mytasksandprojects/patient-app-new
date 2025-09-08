@@ -1,0 +1,76 @@
+{
+  "project_info": {
+    "project_number": "819814304022",
+    "project_id": "medical-7401d",
+    "storage_bucket": "medical-7401d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819814304022:android:cd36daef0224fa61762837",
+        "android_client_info": {
+          "package_name": "com.dramr.doctor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChxLpj90ewgDAXAdvJy2K3LCVvEpSPqg8"
+        },
+        {
+          "current_key": "AIzaSyB6T-dxViguhKzq-zzSRgETZoF4NZ8vh5c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819814304022:android:85eb4a54f90c1335762837",
+        "android_client_info": {
+          "package_name": "com.dramr.user"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChxLpj90ewgDAXAdvJy2K3LCVvEpSPqg8"
+        },
+        {
+          "current_key": "AIzaSyB6T-dxViguhKzq-zzSRgETZoF4NZ8vh5c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819814304022:android:086ccff9dc27b282762837",
+        "android_client_info": {
+          "package_name": "com.medicalcare.userapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChxLpj90ewgDAXAdvJy2K3LCVvEpSPqg8"
+        },
+        {
+          "current_key": "AIzaSyB6T-dxViguhKzq-zzSRgETZoF4NZ8vh5c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
