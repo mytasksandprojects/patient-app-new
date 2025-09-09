@@ -553,6 +553,10 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                 _selectedCategoryId = category.id;
                 _selectedCategoryTypes = category.types ?? [];
                 _selectedSubTypeId = null;
+                
+                // Refresh time slots when appointment type changes
+                print('🔄 Appointment type changed to: ${category.id} - Refreshing time slots');
+                _refreshTimeSlots();
                 _selectedAppointmentId=null;
                 _selectedAppointmentCategory=category;
                 appointmentFee = getFeeFilter(_selectedAppointmentType);
@@ -562,7 +566,7 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                 _setTime = "";
                 
                 // Refresh time slots for new appointment type (except emergency)
-                if (_selectedAppointmentType != "3") {
+                {
                   _refreshTimeSlots();
                 }
               });
@@ -1178,14 +1182,24 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                           _buildCalendar(setState),
                           const Divider(),
                           Obx(() {
+                            print('🎛️ UI UPDATE - Controller Status:');
+                            print('  - TimeSlotsController loading: ${_timeSlotsController.isLoading.value}');
+                            print('  - TimeSlotsController error: ${_timeSlotsController.isError.value}');
+                            print('  - TimeSlotsController dataList length: ${_timeSlotsController.dataList.length}');
+                            print('  - BookedTimeSlotsController loading: ${_bookedTimeSlotsController.isLoading.value}');
+                            print('  - BookedTimeSlotsController error: ${_bookedTimeSlotsController.isError.value}');
+                            print('  - BookedTimeSlotsController dataList length: ${_bookedTimeSlotsController.dataList.length}');
+                            
                             // if (!_timeSlotsController.isError.value &&
                             //     !_bookedTimeSlotsController.isError.value) {
                               // if no any error
                               if (_timeSlotsController.isLoading.value ||
                                   _bookedTimeSlotsController.isLoading.value) {
+                                print('🔄 Showing loading indicator');
                                 return const ILoadingIndicatorWidget();
                               } else if (_timeSlotsController
                                   .dataList.isEmpty) {
+                                print('❌ Showing no available slots message - dataList is empty');
                                 return Padding(
                                   padding: EdgeInsets.all(20.0),
                                   child: Container(
@@ -1221,6 +1235,7 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                                   ),
                                 );
                               } else {
+                                print('✅ Showing time slots grid with ${_timeSlotsController.dataList.length} slots');
                                 return _slotsGridView(
                                     setState,
                                     _timeSlotsController.dataList,
@@ -1316,21 +1331,56 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
     setState(() {
       _selectedDate = formattedDate;
     });
+    
+    // Also update the main widget state
+    this.setState(() {
+      _selectedDate = formattedDate;
+    });
+    
     _fetchTimeSlots(date);
     _fetchBookedSlots(formattedDate);
   }
 
   void _fetchTimeSlots(DateTime date) {
-    _timeSlotsController.getData(_getCurrentDoctorId(),
-        DateTimeHelper.getDayName(date.weekday), _selectedAppointmentType,_selectedBranch?.id?.toString() ?? "");
+    final doctorId = _getCurrentDoctorId();
+    final dayName = DateTimeHelper.getDayName(date.weekday);
+    final appointmentType = _selectedAppointmentType;
+    final branchId = _selectedBranch?.id?.toString() ?? "";
+    
+    print('🕒 FETCHING TIME SLOTS:');
+    print('  - Doctor ID: $doctorId');
+    print('  - Day Name: $dayName');
+    print('  - Appointment Type: $appointmentType');
+    print('  - Branch ID: $branchId');
+    print('  - Date: ${DateFormat('yyyy-MM-dd').format(date)}');
+    
+    _timeSlotsController.getData(doctorId, dayName, appointmentType, branchId);
+    
+    // Refresh the main widget state after fetching
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   void _fetchBookedSlots(String date) {
-    _bookedTimeSlotsController.getData(
-      _getCurrentDoctorId(),
-      date,
-        _selectedBranch?.id?.toString() ?? ""
-    );
+    final doctorId = _getCurrentDoctorId();
+    final branchId = _selectedBranch?.id?.toString() ?? "";
+    
+    print('📅 FETCHING BOOKED SLOTS:');
+    print('  - Doctor ID: $doctorId');
+    print('  - Date: $date');
+    print('  - Branch ID: $branchId');
+    
+    _bookedTimeSlotsController.getData(doctorId, date, branchId);
+    
+    // Refresh the main widget state after fetching
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   /// Refresh time slots for current date and selected doctor/branch
@@ -1545,9 +1595,16 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
     final branchesRes = await DepartmentService.getData();
     if (branchesRes != null && branchesRes.isNotEmpty) {
       _branches = branchesRes;
+      
+      // Automatically select the first branch if none is selected
+      if (_selectedBranch == null && _branches.isNotEmpty) {
+        _selectedBranch = _branches.first;
+        print('Auto-selected first branch: ${_selectedBranch?.title}');
+      }
     }
     _selectedDate =
         DateTimeHelper.getYYYMMDDFormatDate(DateTime.now().toString());
+    
     final resDoctors = await DoctorsService.getDataById(doctId: widget.doctId);
     if (resDoctors != null) {
       _doctorsModel = resDoctors;
@@ -1621,6 +1678,14 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
       if (resDR != null) {
         doctorReviewModel = resDR;
       }
+      
+      // Fetch initial time slots if we have a selected branch and doctor
+      if (_selectedBranch != null && _doctorsModel != null) {
+        print('Fetching initial doctors for branch: ${_selectedBranch?.title}');
+        // Fetch doctors for the auto-selected branch, which will then fetch time slots
+        _fetchDoctorsForBranch(_selectedBranch!.id.toString());
+      }
+      
       setState(() {
         _isLoading = false;
       });
@@ -2145,14 +2210,18 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                                     child: ListTile(
                                       onTap: () {
                                         _selectedBranch = branch;
+                                        print('_selectedBranch');
+                                        print(_selectedBranch?.id);
                                         _selectedBranchDoctor = null; // Clear selected doctor
                                         this.setState(() {});
                                         Get.back();
-                                        // Fetch doctors for this branch
-                                        _fetchDoctorsForBranch(branch.id.toString());
+                                        
                                         // Clear selected time and date to force refresh
                                         _setTime = "";
                                         _selectedDate = DateTimeHelper.getYYYMMDDFormatDate(DateTime.now().toString());
+                                        
+                                        // Fetch doctors for this branch (this will automatically fetch time slots when done)
+                                        _fetchDoctorsForBranch(branch.id.toString());
                                       },
                                       leading: Container(
                                         width: 40,
@@ -3003,14 +3072,21 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
 
   bool getCheckBookedTimeSlot(
       String timeStart, List<BookedTimeSlotsModel> bookedTimeSlots) {
-    bool retuenValue = false;
+    bool returnValue = false;
+    
+    // Debug: Print the comparison values
+    print("Checking timeStart: '$timeStart' against booked slots:");
     for (var element in bookedTimeSlots) {
+      print("  - Booked slot: '${element.timeSlots}'");
       if (element.timeSlots == timeStart) {
-        retuenValue = true;
+        returnValue = true;
+        print("  ✓ MATCH FOUND!");
         break;
       }
     }
-    return retuenValue;
+    print("Result: $returnValue");
+    
+    return returnValue;
   }
 
   void clearInitData() {
@@ -3084,6 +3160,7 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
 
   /// Fetch doctors for the selected branch
   void _fetchDoctorsForBranch(String departmentId) async {
+    print('Fetching doctors for department: $departmentId');
     setState(() {}); // Update UI to show loading state
     
     await _branchDoctorController.getDoctorsByDepartmentId(departmentId);
@@ -3091,9 +3168,13 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
     // Auto-select the first (and only) doctor if available
     if (_branchDoctorController.hasDoctors) {
       _selectedBranchDoctor = _branchDoctorController.dataList.first;
+      print('Auto-selected doctor: ${_selectedBranchDoctor?.name} (ID: ${_selectedBranchDoctor?.userId})');
       
       // Fetch time slots for the new doctor/branch combination
+      print('Now fetching time slots for selected doctor and branch...');
       _refreshTimeSlots();
+    } else {
+      print('No doctors found for department: $departmentId');
     }
     
     setState(() {}); // Update UI with the new doctor
@@ -3101,7 +3182,9 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
 
   /// Get current doctor ID being used for booking
   String _getCurrentDoctorId() {
-    return _selectedBranchDoctor?.userId?.toString() ?? widget.doctId ?? "";
+    final doctorId = _selectedBranchDoctor?.userId?.toString() ?? widget.doctId ?? "";
+    print('_getCurrentDoctorId() returning: $doctorId (selectedBranchDoctor: ${_selectedBranchDoctor?.userId}, widget.doctId: ${widget.doctId})');
+    return doctorId;
   }
 
   /// Get patient ID from PatientsService
