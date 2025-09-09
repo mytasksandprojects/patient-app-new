@@ -1387,9 +1387,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   void getAndSetData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
     final res = await NotificationSeenService.getDataById();
     if (res != null) {
       if (res.dotStatus == true) {
@@ -1405,102 +1407,46 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    // Store URLs for future use
     if (Platform.isAndroid) {
       final webSetting =
           await ConfigurationService.getDataById(idName: "play_store_link");
-
       if (webSetting != null) {
         playStoreUrl = webSetting.value ?? "";
         if (kDebugMode) {
           print("Play store Url ${webSetting.value}");
         }
       }
+      
+      // Check for technical issues (keeping this functionality)
       final issueSetting = await ConfigurationService.getDataById(
           idName: "android_technical_issue_enable");
       if (issueSetting != null) {
         if (issueSetting.value == "true") {
           _openDialogIssueBox();
-        } else {
-          final updateBox = await ConfigurationService.getDataById(
-              idName: "android_update_box_enable");
-          if (updateBox != null) {
-            if (updateBox.value == "true") {
-              final versionSetting = await ConfigurationService.getDataById(
-                  idName: "android_android_app_version");
-              if (versionSetting != null) {
-                PackageInfo.fromPlatform()
-                    .then((PackageInfo packageInfo) async {
-                  String version = packageInfo.version;
-                  if (kDebugMode) {
-                    print("Version $version");
-                    print("setting version ${versionSetting.value}");
-                  }
-                  if (version.toString() != versionSetting.value.toString()) {
-                    final forceUpdateSetting =
-                        await ConfigurationService.getDataById(
-                            idName: "android_force_update_box_enable");
-                    if (forceUpdateSetting != null) {
-                      if (forceUpdateSetting.value == "true") {
-                        _openDialogSettingBox(false);
-                      } else {
-                        _openDialogSettingBox(true);
-                      }
-                    }
-                  }
-                });
-              }
-            }
-          }
         }
       }
+      // NOTE: Old update logic removed - now handled in splash screen with new AppUpdateDialog
+      
     } else if (Platform.isIOS) {
       final webSetting =
           await ConfigurationService.getDataById(idName: "app_store_link");
-
       if (webSetting != null) {
         appStoreUrl = webSetting.value ?? "";
         if (kDebugMode) {
           print("app store Url ${webSetting.value}");
         }
       }
+      
+      // Check for technical issues (keeping this functionality)
       final issueSetting = await ConfigurationService.getDataById(
           idName: "ios_technical_issue_enable");
       if (issueSetting != null) {
         if (issueSetting.value == "true") {
           _openDialogIssueBox();
-        } else {
-          final updateBox = await ConfigurationService.getDataById(
-              idName: "ios_update_box_enable");
-          if (updateBox != null) {
-            if (updateBox.value == "true") {
-              final versionSetting = await ConfigurationService.getDataById(
-                  idName: "ios_app_version");
-              if (versionSetting != null) {
-                PackageInfo.fromPlatform()
-                    .then((PackageInfo packageInfo) async {
-                  String version = packageInfo.version;
-                  if (kDebugMode) {
-                    print("Version Ios $version");
-                    print("setting version Ios ${versionSetting.value}");
-                  }
-                  if (version.toString() != versionSetting.value.toString()) {
-                    final forceUpdateSetting =
-                        await ConfigurationService.getDataById(
-                            idName: "ios_force_update_box_enable");
-                    if (forceUpdateSetting != null) {
-                      if (forceUpdateSetting.value == "true") {
-                        _openDialogSettingBox(false);
-                      } else {
-                        _openDialogSettingBox(true);
-                      }
-                    }
-                  }
-                });
-              }
-            }
-          }
         }
       }
+      // NOTE: Old update logic removed - now handled in splash screen with new AppUpdateDialog
     }
     final configRes = await ConfigurationService.getDataByGroupName("Basic");
     if (configRes != null) {
@@ -1526,95 +1472,13 @@ class _HomePageState extends State<HomePage> {
       }
     }
     _requestNotificationPermission();
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
-  _openDialogSettingBox(bool isCancel) {
-    return showDialog(
-      barrierDismissible: false,
-      context: context,
-      builder: (BuildContext context) {
-        // return object of type Dialog
-        return PopScope(
-          canPop: isCancel,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.0),
-            ),
-            title: const Text(
-              "Update",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                    isCancel
-                        ? "New version is available, please update the app"
-                        : "Sorry we are currently not supporting the old version of the app please update with new version",
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w400, fontSize: 12)),
-                const SizedBox(height: 10),
-              ],
-            ),
-            actions: <Widget>[
-              isCancel
-                  ? ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: ColorResources.greyBtnColor,
-                      ),
-                      child: const Text("Cancel",
-                          style: TextStyle(
-                              fontWeight: FontWeight.w400, fontSize: 12)),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      })
-                  : Container(),
-              ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: ColorResources.greenFontColor,
-                  ),
-                  child: const Text(
-                    "Update",
-                    style: TextStyle(fontWeight: FontWeight.w400, fontSize: 12),
-                  ),
-                  onPressed: () async {
-                    // Navigator.of(context).pop();
-                    if (Platform.isAndroid) {
-                      if (playStoreUrl != "") {
-                        try {
-                          await launchUrl(Uri.parse(playStoreUrl),
-                              mode: LaunchMode.externalApplication);
-                        } catch (e) {
-                          if (kDebugMode) {
-                            print(e);
-                          }
-                        }
-                      }
-                    } else if (Platform.isIOS) {
-                      if (appStoreUrl != "") {
-                        try {
-                          await launchUrl(Uri.parse(appStoreUrl),
-                              mode: LaunchMode.externalApplication);
-                        } catch (e) {
-                          if (kDebugMode) {
-                            print(e);
-                          }
-                        }
-                      }
-                    }
-                  }),
-              // usually buttons at the bottom of the dialog
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   _openDialogIssueBox() {
     return showDialog(

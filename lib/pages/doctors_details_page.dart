@@ -557,6 +557,14 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                 _selectedAppointmentCategory=category;
                 appointmentFee = getFeeFilter(_selectedAppointmentType);
                 amtCalculation();
+                
+                // Clear selected time when appointment type changes
+                _setTime = "";
+                
+                // Refresh time slots for new appointment type (except emergency)
+                if (_selectedAppointmentType != "3") {
+                  _refreshTimeSlots();
+                }
               });
             }
           : null,
@@ -758,11 +766,11 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                                 widget.doctId ?? "",
                                 DateTimeHelper.getDayName(
                                     _todayDayTime.weekday),
-                                _selectedAppointmentType,_selectedBranch!.id.toString());
+                                _selectedAppointmentType,_selectedBranch?.id?.toString() ?? "");
                             _bookedTimeSlotsController.getData(
                                 widget.doctId ?? "",
                                 DateTimeHelper.getYYYMMDDFormatDate(
-                                    _todayDayTime.toString()),_selectedBranch!.id.toString());
+                                    _todayDayTime.toString()),_selectedBranch?.id?.toString() ?? "");
                             _openBottomSheet();
                           },
                           child: Container(
@@ -839,11 +847,11 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                                 widget.doctId ?? "",
                                 DateTimeHelper.getDayName(
                                     _todayDayTime.weekday),
-                                _selectedAppointmentType,_selectedBranch!.id.toString());
+                                _selectedAppointmentType,_selectedBranch?.id?.toString() ?? "");
                             _bookedTimeSlotsController.getData(
                                 widget.doctId ?? "",
                                 DateTimeHelper.getYYYMMDDFormatDate(
-                                    _todayDayTime.toString()),_selectedBranch!.id.toString());
+                                    _todayDayTime.toString()),_selectedBranch?.id?.toString() ?? "");
                             _openBottomSheet();
                           },
                           child: Container(
@@ -939,11 +947,11 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                                     _getCurrentDoctorId(),
                                     DateTimeHelper.getDayName(
                                         _todayDayTime.weekday),
-                                    _selectedAppointmentType,_selectedBranch!.id.toString());
+                                    _selectedAppointmentType,_selectedBranch?.id?.toString() ?? "");
                                 _bookedTimeSlotsController.getData(
                                     _getCurrentDoctorId(),
                                     DateTimeHelper.getYYYMMDDFormatDate(
-                                        _todayDayTime.toString()),_selectedBranch!.id.toString());
+                                        _todayDayTime.toString()),_selectedBranch?.id?.toString() ?? "");
                                 _openBottomSheet();
                                 return;
                             } else if (_selectedDate != "" && _setTime != "") {
@@ -1063,13 +1071,13 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                                                 _getCurrentDoctorId(),
                                                 DateTimeHelper.getDayName(
                                                     _todayDayTime.weekday),
-                                                _selectedAppointmentType,_selectedBranch!.id.toString());
+                                                _selectedAppointmentType,_selectedBranch?.id?.toString() ?? "");
                                             _bookedTimeSlotsController.getData(
                                                 _getCurrentDoctorId(),
                                                 DateTimeHelper
                                                     .getYYYMMDDFormatDate(
                                                         _todayDayTime
-                                                            .toString()),_selectedBranch!.id.toString());
+                                                            .toString()),_selectedBranch?.id?.toString() ?? "");
                                             _openBottomSheet();
                                             return;
                                           } else if (_selectedDate != "" &&
@@ -1314,15 +1322,22 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
 
   void _fetchTimeSlots(DateTime date) {
     _timeSlotsController.getData(_getCurrentDoctorId(),
-        DateTimeHelper.getDayName(date.weekday), _selectedAppointmentType,_selectedBranch!.id.toString());
+        DateTimeHelper.getDayName(date.weekday), _selectedAppointmentType,_selectedBranch?.id?.toString() ?? "");
   }
 
   void _fetchBookedSlots(String date) {
     _bookedTimeSlotsController.getData(
       _getCurrentDoctorId(),
       date,
-        _selectedBranch!.id.toString()
+        _selectedBranch?.id?.toString() ?? ""
     );
+  }
+
+  /// Refresh time slots for current date and selected doctor/branch
+  void _refreshTimeSlots() {
+    final currentDate = _parseSelectedDate(_selectedDate);
+    _fetchTimeSlots(currentDate);
+    _fetchBookedSlots(_selectedDate);
   }
 
   _buildExReCard() {
@@ -1630,9 +1645,9 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
           _timeSlotsController.getData(
               _getCurrentDoctorId(),
               DateTimeHelper.getDayName(_todayDayTime.weekday),
-              _selectedAppointmentType,_selectedBranch!.id.toString());
+              _selectedAppointmentType,_selectedBranch?.id?.toString() ?? "");
           _bookedTimeSlotsController.getData(_getCurrentDoctorId(),
-              DateTimeHelper.getYYYMMDDFormatDate(_todayDayTime.toString()),_selectedBranch!.id.toString());
+              DateTimeHelper.getYYYMMDDFormatDate(_todayDayTime.toString()),_selectedBranch?.id?.toString() ?? "");
           _openBottomSheet();
           return;
         } else if (_selectedDate != "" && _setTime != "") {
@@ -2135,6 +2150,9 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                                         Get.back();
                                         // Fetch doctors for this branch
                                         _fetchDoctorsForBranch(branch.id.toString());
+                                        // Clear selected time and date to force refresh
+                                        _setTime = "";
+                                        _selectedDate = DateTimeHelper.getYYYMMDDFormatDate(DateTime.now().toString());
                                       },
                                       leading: Container(
                                         width: 40,
@@ -2724,7 +2742,7 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
                                     child: SmallButtonsWidget(
-                                      title: couponValue == null ? "Apply" : "Remove",
+                                      title: couponValue == null ? S.of(context).LApply : S.of(context).LRemove,
                                       width: MediaQuery.of(context).size.width/3.5,
                                       onPressed: couponValue == null
                                           ? () => _validateCoupon(setState)
@@ -3073,6 +3091,9 @@ class _DoctorsDetailsPageState extends State<DoctorsDetailsPage> {
     // Auto-select the first (and only) doctor if available
     if (_branchDoctorController.hasDoctors) {
       _selectedBranchDoctor = _branchDoctorController.dataList.first;
+      
+      // Fetch time slots for the new doctor/branch combination
+      _refreshTimeSlots();
     }
     
     setState(() {}); // Update UI with the new doctor

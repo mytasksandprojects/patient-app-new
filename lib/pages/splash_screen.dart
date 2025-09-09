@@ -120,7 +120,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _navigateToNextScreen() async {
     // Add a small delay before navigation for better UX
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 800));
     
     if (mounted) {
       // Check for app updates before navigating
@@ -137,16 +137,21 @@ class _SplashScreenState extends State<SplashScreen>
         // Get update configuration
         final updateConfig = await AppUpdateService.getUpdateConfig();
         
+        // Small delay before showing dialog for smoother transition
+        await Future.delayed(const Duration(milliseconds: 300));
+        
         // Show update dialog
-        await AppUpdateDialog.show(
-          context,
-          updateResult: updateResult,
-          updateConfig: updateConfig,
-          onLater: updateResult.forceUpdate ? null : () {
-            // If not force update, proceed to home
-            _navigateToHome();
-          },
-        );
+        if (mounted) {
+          await AppUpdateDialog.show(
+            context,
+            updateResult: updateResult,
+            updateConfig: updateConfig,
+            onLater: updateResult.forceUpdate ? null : () {
+              // If not force update, proceed to home
+              _navigateToHome();
+            },
+          );
+        }
         
         // If force update, don't navigate to home
         if (!updateResult.forceUpdate) {

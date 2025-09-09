@@ -227,10 +227,10 @@ class AppUpdateDialog extends StatelessWidget {
       if (storeUrl.isEmpty || storeUrl == "https://play.google.com/store/apps") {
         if (Platform.isAndroid) {
           // Try to get package name dynamically
-          storeUrl = "market://details?id=com.example.userapp"; // Replace with your actual package name
+          storeUrl = "https://play.google.com/store/apps/details?id=com.dramr.userapp"; // Replace with your actual package name
           // Fallback to web version
           if (!await canLaunch(storeUrl)) {
-            storeUrl = "https://play.google.com/store/apps/details?id=com.example.userapp";
+            storeUrl = "https://play.google.com/store/apps/details?id=com.dramr.userapp";
           }
         } else if (Platform.isIOS) {
           storeUrl = "https://apps.apple.com/app/id123456789"; // Replace with your App Store ID
